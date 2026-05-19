@@ -7,8 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Controller responsável pela autenticação.
@@ -24,30 +24,48 @@ public class AuthController {
 
     /**
      * POST /api/auth/login
-     * Recebe email e senha, valida e retorna um token JWT se correto.
-     *
-     * Map<String, String> — forma simples de receber JSON { "email": "...", "senha": "..." }
-     * sem precisar criar um DTO específico para login.
+     * Recebe email e senha, valida e retorna access token + refresh token.
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
         String email = body.get("email");
         String senha = body.get("senha");
 
-        // Busca o usuário pelo e-mail — lança erro se não existir
         Usuario usuario = usuarioRepository.findByEmailUser(email)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
 
-        // passwordEncoder.matches() compara a senha em texto puro com o hash salvo no banco
-        // NUNCA comparamos as strings diretamente — o BCrypt faz isso de forma segura
         if (!passwordEncoder.matches(senha, usuario.getSenhaUser())) {
             return ResponseEntity.status(401).body("Senha incorreta.");
         }
 
-        // Gera o token JWT com o e-mail como identificador
-        String token = jwtUtil.gerarToken(email);
+        String accessToken = jwtUtil.gerarToken(email);
+        String refreshToken = jwtUtil.gerarRefreshToken(email);
 
-        // Retorna o token para o cliente guardar e usar nas próximas requisições
-        return ResponseEntity.ok(Map.of("token", token));
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("accessToken", accessToken);
+        tokens.put("refreshToken", refreshToken);
+
+        return ResponseEntity.ok(tokens);
+    }
+
+    /**
+     * POST /api/auth/refresh
+     * Recebe o refresh token e retorna um novo access token.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestBody Map<String, String> body) {
+        String refreshToken = body.get("refreshToken");
+
+        if (!jwtUtil.validarToken(refreshToken)) {
+            return ResponseEntity.status(401).body("Refresh token inválido ou expirado.");
+        }
+
+        String email = jwtUtil.extrairEmail(refreshToken);
+        String novoAccessToken = jwtUtil.gerarToken(email);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("accessToken", novoAccessToken);
+
+        return ResponseEntity.ok(response);
     }
 }

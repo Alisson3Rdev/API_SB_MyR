@@ -28,6 +28,7 @@ public class JwtUtil {
     // Gera a chave criptográfica a partir da string secreta
     private final SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
+
     /**
      * Gera um token JWT assinado com o e-mail do usuário.
      * Na 0.12.x o signWith() detecta o algoritmo automaticamente pela chave.
@@ -60,7 +61,15 @@ public class JwtUtil {
             return false;
         }
     }
-
+    private static final long REFRESH_EXPIRATION_MS = 604800000;
+    public String gerarRefreshToken(String email){
+        return Jwts.builder()
+        .subject(email)
+        .issuedAt(new Date())
+        .expiration(new Date(System.currentTimeMillis()+REFRESH_EXPIRATION_MS))
+        .signWith(key)
+        .compact();
+    }
     /**
      * Método auxiliar que faz o parse do token e retorna os Claims (payload).
      * Centralizado aqui para não repetir nos outros métodos.
