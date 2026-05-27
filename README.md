@@ -96,7 +96,7 @@ Authorization: Bearer <seu_token_aqui>
 ```json
 {
   "nomeUser": "Alisson",
-  "apelidoUser": "Ali",
+  "apelidoUser": "Alisoo",
   "emailUser": "alisson@email.com",
   "senhaUser": "minimo6",
   "nascimentoUser": "2000-01-01",
